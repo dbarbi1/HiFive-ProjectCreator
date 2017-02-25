@@ -10,6 +10,7 @@ function message    {
     echo "-b, Specifies the board to use when building the BSP"
     echo "    Default behavior uses freedom-e300-hifive1"
     echo "-v, Add Visual Studio Code Debugger and Launch files"
+    echo "-c, copies bsp dir from freedom-e-sdk to project dir"
     exit 1
 }
 
@@ -17,11 +18,12 @@ if [ $# -eq 0 ];    then
     message
 else
     SHIFTER=0
-    while getopts 't:b:v' flag; do
+    while getopts 't:b:vc' flag; do
         case "${flag}" in
-            t) SDK_DIR=${OPTARG}; CURDIR=`pwd`; cd $SDK_DIR; SDK_DIR=`pwd`; cd $CURDIR; SHIFTER=$((SHIFTER+2));;
-            b) BOARD=${OPTARG}; SHIFTER=$((SHIFTER+2));;
-            v) VSCODE=true; SHIFTER=$((SHIFTER+1));;
+            t) SDK_DIR=${OPTARG}; CURDIR=`pwd`; cd $SDK_DIR; SDK_DIR=`pwd`; cd $CURDIR;;
+            b) BOARD=${OPTARG};;
+            v) VSCODE=true;;
+            c) COPY=true;;
             ?) message; exit 2 ;;
         esac
     done
@@ -29,11 +31,11 @@ else
 fi
 
 #DEST_DIR is always $1
-DEST_DIR=$1
+DEST_DIR=${@: -1}
 
 ##set defaults if not set
 if [ -z ${PROJ_NAME} ]; then 
-    PROJ_NAME="$(basename $1)"
+    PROJ_NAME="$(basename $DEST_DIR)"
 fi
 
 if [ -z ${SDK_DIR} ]; then
@@ -50,6 +52,7 @@ echo Project Name is $PROJ_NAME
 echo SDK directory is $SDK_DIR
 echo Board is $BOARD
 
+
 #test if dest dir exist
 #if so check $2 if we should overwrite
 if [ -d "$DEST_DIR" ]; then
@@ -63,9 +66,15 @@ mkdir $DEST_DIR/docs
 cp Makefile $DEST_DIR
 cp README.md $DEST_DIR
 cp -r HiFive-Skeleton/src/ $DEST_DIR/src
-cp -r $SDK_DIR/bsp $DEST_DIR/bsp
-rm $DEST_DIR/bsp/env/common.mk
-cp bsp.mk $DEST_DIR/bsp/env/
+
+if [ "$COPY" = true ]; then
+    echo Copying bsp directory to project directory
+    cp -r $SDK_DIR/bsp $DEST_DIR/bsp
+else
+    ln -s $SDK_DIR/bsp $DEST_DIR/bsp
+fi
+    #rm $DEST_DIR/bsp/env/common.mk
+    cp bsp.mk $DEST_DIR
 
 ##bsp/tools/openocd_upload.sh
 rm $DEST_DIR/bsp/tools/openocd_upload.sh

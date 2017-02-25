@@ -35,7 +35,8 @@ ifneq ($(filter-out clean, $(MAKECMDGOALS)),)
 endif
 
  #build the bsp
-include $(BSP_BASE)/env/bsp.mk
+#include $(BSP_BASE)/env/bsp.mk
+include bsp.mk
 
 .PHONY: clean all depend
 .SUFFIXES:
