@@ -92,6 +92,48 @@ void led_init() {
     PWM1_REG(PWM_CMP3)  = 0; // PWM is low on the left, GPIO is low on the right, LED is on on the right.
 }
 
+/*
+**Interrupt Service Routine Called when wake button is pushed
+*/
+void wake_ISR() {
+  static int state = 0;
+  const char* default_handler_message = "Wake Handler\n";
+  write(STDOUT_FILENO, default_handler_message, strlen(default_handler_message));
+
+
+  if(state) {
+    led_control(RED_LED_OFFSET, LED_OFF);
+    state = 0;
+  }else   {
+    led_control(RED_LED_OFFSET, LED_ON/2);
+    state = 1;
+  }
+  //clear irq - interrupt pending register is write 1 to clear
+  GPIO_REG(GPIO_FALL_IP) |= (1<<PIN_2_OFFSET);
+}
+
+/*
+**configures the wake button for irq trigger
+**requires that the wake pin is connected to pin2
+*/
+void wake_irq_init()  {
+
+    //dissable hw io function
+    GPIO_REG(GPIO_IOF_EN )    &=  ~(1 << PIN_2_OFFSET);
+
+    //set to input
+    GPIO_REG(GPIO_INPUT_EN)   |= (1<<PIN_2_OFFSET);
+    GPIO_REG(GPIO_PULLUP_EN)  |= (1<<PIN_2_OFFSET);
+
+    //set to interrupt on falling edge
+    GPIO_REG(GPIO_FALL_IE)    |= (1<<PIN_2_OFFSET);
+
+    enable_interrupt(INT_GPIO_BASE+PIN_2_OFFSET, 2, &wake_ISR);
+
+}
+
+
+
 void led_control(uint32_t rgb, uint32_t value)  {
 
   switch (rgb)
@@ -115,27 +157,17 @@ void led_control(uint32_t rgb, uint32_t value)  {
 
 void hifive_init () {
 
-  // Disable the machine & timer interrupts until setup is done.
-
-    clear_csr(mie, MIP_MEIP);
-    clear_csr(mie, MIP_MTIP);
-
-    led_init();
     interrupts_init();
-    print_instructions();
 
     //set the tick freq and handler
     set_mtime_interrupt(1000, &tick_handler);
 
+    led_init();
+    wake_irq_init();
 
-    // Enable the Machine-External bit in MIE
-    set_csr(mie, MIP_MEIP);
+    //print logo
+    print_instructions();
 
-    // Enable the Machine-Timer bit in MIE
-    set_csr(mie, MIP_MTIP);
-
-    // Enable interrupts in general.
-    set_csr(mstatus, MSTATUS_MIE);
 }
 
 int main(int argc, char **argv)

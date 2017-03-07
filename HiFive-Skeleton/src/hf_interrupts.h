@@ -15,6 +15,7 @@ void handle_m_time_interrupt();
 
 void set_mtime_interrupt(uint64_t msecs, interrupt_function_ptr_t tick_handler);
 
+void enable_interrupt(uint32_t int_num, uint32_t int_priority, interrupt_function_ptr_t handler); 
 /*
  *enables the plic and programs handlers
 **/

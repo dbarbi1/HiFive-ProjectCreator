@@ -73,6 +73,9 @@ void set_mtime_interrupt(uint64_t msecs, interrupt_function_ptr_t tick_handler) 
   uint64_t now = *mtime;
   uint64_t then = now + mtime_tick_freq;
   *mtimecmp = then; 
+
+    // Enable the Machine-Timer bit in MIE
+    set_csr(mie, MIP_MTIP);
 }
 
 //enables interrupt and assigns handler
@@ -86,6 +89,12 @@ void enable_interrupt(uint32_t int_num, uint32_t int_priority, interrupt_functio
  *enables the plic and programs handlers
 **/
 void interrupts_init(  ) {
+
+    // Disable the machine & timer interrupts until setup is done.
+    clear_csr(mie, MIP_MEIP);
+    clear_csr(mie, MIP_MTIP);
+
+
   /**************************************************************************
    * Set up the PLIC
    *
@@ -99,5 +108,11 @@ void interrupts_init(  ) {
   for (int ii = 0; ii < PLIC_NUM_INTERRUPTS; ii ++){
     g_ext_interrupt_handlers[ii] = default_handler;;
   }
+
+      // Enable the Machine-External bit in MIE
+    set_csr(mie, MIP_MEIP);
+
+    // Enable interrupts in general.
+    set_csr(mstatus, MSTATUS_MIE);
 
 }
